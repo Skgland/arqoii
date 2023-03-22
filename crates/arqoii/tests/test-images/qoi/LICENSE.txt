@@ -1,1 +1,0 @@
-The image files in this folder are from the test image set https://qoiformat.org/qoi_test_images.zip from https://qoiformat.org/
