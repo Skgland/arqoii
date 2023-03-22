@@ -23,7 +23,7 @@ jobs:
         override: true
         components: rustfmt, clippy
     - name: Cache dependencies
-      uses: Swatinem/rust-cache@v1
+      uses: Swatinem/rust-cache@v2.2.1
     - name: Check Rustfmt
       run: cargo fmt -- --check
     - name: Check Clippy
@@ -42,7 +42,7 @@ jobs:
         toolchain: stable
         override: true
     - name: Cache dependencies
-      uses: Swatinem/rust-cache@v1
+      uses: Swatinem/rust-cache@v2.2.1
     - name: Build
       run: cargo build --verbose
     - name: Run tests
