@@ -1,12 +1,8 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
 
 use core::{default::Default, iter::{IntoIterator, FusedIterator}, result::Result::Ok};
 
-#[cfg(feature = "std")]
-use std::io::Write;
 
 pub use qoif_types as types;
 
@@ -236,23 +232,4 @@ impl<I: Iterator<Item = Pixel>> Iterator for QoiEncoder<I> {
             None
         }
     }
-}
-
-#[cfg(feature = "std")]
-pub fn encode<I, W: Write>(
-    header: QoiHeader,
-    pixels: I,
-    writer: &mut W,
-) -> Result<(), std::io::Error>
-where
-    I: IntoIterator<Item = Pixel>,
-{
-    let size = (header.width as u64) * (header.height as u64);
-
-    let data: Vec<_> =
-        QoiEncoder::new(header, pixels.into_iter().take(size as usize).fuse()).collect();
-
-    writer.write_all(&data)?;
-
-    Ok(())
 }

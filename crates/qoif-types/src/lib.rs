@@ -1,21 +1,8 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
-
-#[cfg(feature = "std")]
-use std::io::Write;
 
 #[derive(Debug)]
 pub struct QoiMagic;
-
-impl QoiMagic {
-    #[cfg(feature = "std")]
-    pub fn encode<W: Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
-        writer.write_all(b"qoif")?;
-        Ok(())
-    }
-}
 
 
 #[derive(Debug, Clone)]
@@ -52,16 +39,6 @@ impl QoiHeader {
             channels,
             color_space,
         }
-    }
-
-    #[cfg(feature = "std")]
-    pub fn encode<W: Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
-        self.magic.encode(writer)?;
-        writer.write_all(&self.width.to_be_bytes())?;
-        writer.write_all(&self.height.to_be_bytes())?;
-        writer.write_all(&[self.channels.clone() as u8])?;
-        writer.write_all(&[self.color_space.clone() as u8])?;
-        Ok(())
     }
 
     pub fn to_bytes(&self) -> [u8; 14] {
@@ -125,13 +102,6 @@ pub enum QoiChunk {
 }
 
 impl QoiChunk {
-    #[cfg(feature = "std")]
-    pub fn encode<W: Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
-        let mut buf = ChunkBuf::new();
-        self.write_to_chunk_buffer(&mut buf);
-        writer.write_all(buf.as_slice())?;
-        Ok(())
-    }
 
     pub fn new_run(run: u8) -> Self {
         debug_assert!(run <= 62);
