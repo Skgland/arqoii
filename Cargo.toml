@@ -1,15 +1,12 @@
 [workspace]
 members = ["crates/*"]
 
-[package]
-name = "arqoii"
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 
+[workspace.dependencies]
+arqoii-types = { path = "./crates/arqoii-types"}
+png = "0.17.7"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-arqoii-types = {path = "./crates/arqoii-types"}
-
-[dev-dependencies]
-png = "*"
