@@ -3,13 +3,13 @@ use arqoii_types::{QoiChannels, QoiColorSpace, QoiHeader};
 
 #[test]
 fn dice() {
-    transcode("dice", None);
+    transcode("qoi/dice", None);
 }
 
 #[test]
 fn edgecase() {
     transcode(
-        "edgecase",
+        "qoi/edgecase",
         Some(QoiHeader::new(
             256,
             64,
@@ -21,38 +21,38 @@ fn edgecase() {
 
 #[test]
 fn kodim10() {
-    transcode("kodim10", None);
+    transcode("qoi/kodim10", None);
 }
 
 #[test]
 fn kodim23() {
-    transcode("kodim23", None);
+    transcode("qoi/kodim23", None);
 }
 
 #[test]
 fn qoi_logo() {
-    transcode("qoi_logo", None);
+    transcode("qoi/qoi_logo", None);
 }
 
 #[test]
 fn testcard_rgba() {
-    transcode("testcard_rgba", None);
+    transcode("qoi/testcard_rgba", None);
 }
 
 #[test]
 fn testcard() {
-    transcode("testcard", None);
+    transcode("qoi/testcard", None);
 }
 
 #[test]
 fn wikipedia_008() {
-    transcode("wikipedia_008", None);
+    transcode("qoi/wikipedia_008", None);
 }
 
 fn transcode(name: &str, alt_header: Option<QoiHeader>) {
-    let reference_qoi = std::fs::read(format!("tests/expected-outputs/{name}.qoi")).unwrap();
+    let reference_qoi = std::fs::read(format!("tests/test-images/{name}.qoi")).unwrap();
 
-    let png_bytes = std::fs::read(format!("tests/inputs/{name}.png")).unwrap();
+    let png_bytes = std::fs::read(format!("tests/test-images/{name}.png")).unwrap();
     let (info, png_px) = load_png(&png_bytes);
 
     let header = alt_header.unwrap_or_else(|| {
