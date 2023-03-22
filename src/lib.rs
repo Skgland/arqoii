@@ -1,10 +1,10 @@
 #![no_std]
 
 
-use core::{default::Default, iter::{IntoIterator, FusedIterator}, result::Result::Ok};
+use core::{default::Default, iter::{FusedIterator}};
 
 
-pub use qoif_types as types;
+pub use arqoii_types as types;
 
 use types::{ChunkBuf, QoiChunk, QoiHeader};
 

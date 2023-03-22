@@ -2,14 +2,14 @@
 members = ["crates/*"]
 
 [package]
-name = "qoif-rs"
+name = "arqoii"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-qoif-types = {path = "./crates/qoif-types"}
+arqoii-types = {path = "./crates/arqoii-types"}
 
 [dev-dependencies]
 png = "*"

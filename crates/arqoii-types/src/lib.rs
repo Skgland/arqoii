@@ -1,9 +1,6 @@
 #![no_std]
 
-
-#[derive(Debug)]
-pub struct QoiMagic;
-
+const QOI_MAGIC : [u8;4] = *b"qoif";
 
 #[derive(Debug, Clone)]
 #[repr(u8)]
@@ -21,8 +18,6 @@ pub enum QoiColorSpace {
 
 #[derive(Debug)]
 pub struct QoiHeader {
-    #[allow(dead_code)]
-    magic: QoiMagic,
     pub width: u32,
     pub height: u32,
     pub channels: QoiChannels,
@@ -33,7 +28,6 @@ impl QoiHeader {
 
     pub fn new(width: u32, height: u32, channels: QoiChannels, color_space: QoiColorSpace) -> Self {
         Self {
-            magic: QoiMagic,
             width,
             height,
             channels,
@@ -44,20 +38,20 @@ impl QoiHeader {
     pub fn to_bytes(&self) -> [u8; 14] {
         let mut bytes = [0;14];
 
-        for (i, &b) in b"qoif".iter().enumerate() {
+        for (i, &b) in QOI_MAGIC.iter().enumerate() {
             bytes[i] = b;
         }
 
         for (i, b) in self.width.to_be_bytes().into_iter().enumerate() {
-            bytes [i + b"qoif".len()] = b;
+            bytes [i + QOI_MAGIC.len()] = b;
         }
 
         for (i, b) in self.height.to_be_bytes().into_iter().enumerate() {
-            bytes [i + b"qoif".len() + (u32::BITS / 8) as usize] = b;
+            bytes [i + QOI_MAGIC.len() + (u32::BITS / 8) as usize] = b;
         }
 
-        bytes[b"qoif".len() + 2 * (u32::BITS / 8) as usize] = self.channels.clone() as u8;
-        bytes[b"qoif".len() + 2 * (u32::BITS / 8) as usize + 1] = self.color_space.clone() as u8;
+        bytes[QOI_MAGIC.len() + 2 * (u32::BITS / 8) as usize] = self.channels.clone() as u8;
+        bytes[QOI_MAGIC.len() + 2 * (u32::BITS / 8) as usize + 1] = self.color_space.clone() as u8;
 
         bytes
 
@@ -223,7 +217,7 @@ impl ChunkBuf {
         self.len = N;
     }
 
-    fn as_slice(&self) -> &[u8] {
+    pub fn as_slice(&self) -> &[u8] {
         &self.data[0..self.len]
     }
 }

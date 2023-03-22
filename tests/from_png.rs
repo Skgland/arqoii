@@ -1,6 +1,6 @@
 
-use qoif_rs::Pixel;
-use qoif_types::QoiHeader;
+use arqoii::{QoiEncoder, Pixel};
+use arqoii_types::{QoiColorSpace, QoiChannels, QoiHeader};
 
 #[test]
 fn dice() {
@@ -9,7 +9,7 @@ fn dice() {
 
 #[test]
 fn edgecase() {
-    transcode("edgecase", Some(QoiHeader::new(256,64, qoif_types::QoiChannels::Rgba, qoif_types::QoiColorSpace::SRgbWithLinearAlpha)));
+    transcode("edgecase", Some(QoiHeader::new(256,64, QoiChannels::Rgba, QoiColorSpace::SRgbWithLinearAlpha)));
 }
 
 #[test]
@@ -54,16 +54,16 @@ fn transcode(name: &str, alt_header: Option<QoiHeader>) {
             info.width,
             info.height,
             match info.color_type {
-                png::ColorType::Grayscale | png::ColorType::Rgb => qoif_types::QoiChannels::Rgb,
+                png::ColorType::Grayscale | png::ColorType::Rgb => QoiChannels::Rgb,
                 png::ColorType::Indexed => todo!(),
                 png::ColorType::GrayscaleAlpha | png::ColorType::Rgba => {
-                    qoif_types::QoiChannels::Rgba
+                    QoiChannels::Rgba
                 }
             },
-            qoif_types::QoiColorSpace::SRgbWithLinearAlpha,
+            QoiColorSpace::SRgbWithLinearAlpha,
         ));
 
-    let our_qoi = qoif_rs::QoiEncoder::new(header, png_px.into_iter());
+    let our_qoi = QoiEncoder::new(header, png_px.into_iter());
 
     assert!(Iterator::eq(our_qoi, reference_qoi));
 
