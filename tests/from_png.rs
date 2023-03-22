@@ -1,91 +1,75 @@
 
 use qoif_rs::Pixel;
-use qoif_types::QuiHeader;
+use qoif_types::QoiHeader;
 
-#[cfg(feature = "std")]
 #[test]
 fn dice() {
     transcode("dice", None);
 }
 
-#[cfg(feature = "std")]
 #[test]
 fn edgecase() {
-    transcode("edgecase", Some(QuiHeader::new(256,64, qoif_types::QuiChannels::Rgba, qoif_types::QuiColorSpace::SRgbWithLinearAlpha)));
+    transcode("edgecase", Some(QoiHeader::new(256,64, qoif_types::QoiChannels::Rgba, qoif_types::QoiColorSpace::SRgbWithLinearAlpha)));
 }
 
-#[cfg(feature = "std")]
 #[test]
 fn kodim10() {
     transcode("kodim10", None);
 }
 
-#[cfg(feature = "std")]
 #[test]
 fn kodim23() {
     transcode("kodim23", None);
 }
 
-#[cfg(feature = "std")]
 #[test]
 fn qoi_logo() {
     transcode("qoi_logo", None);
 }
 
-#[cfg(feature = "std")]
 #[test]
 fn testcard_rgba() {
     transcode("testcard_rgba", None);
 }
 
-#[cfg(feature = "std")]
 #[test]
 fn testcard() {
     transcode("testcard", None);
 }
 
-#[cfg(feature = "std")]
 #[test]
 fn wikipedia_008() {
     transcode("wikipedia_008", None);
 }
 
-#[cfg(feature = "std")]
-fn transcode(name: &str, alt_header: Option<QuiHeader>) {
+fn transcode(name: &str, alt_header: Option<QoiHeader>) {
+    let reference_qoi = std::fs::read(format!("tests/expected-outputs/{name}.qoi")).unwrap();
+
+
     let png_bytes = std::fs::read(format!("tests/inputs/{name}.png")).unwrap();
-    let qui_bytes = std::fs::read(format!("tests/expected-outputs/{name}.qoi")).unwrap();
+    let (info, png_px) = load_png(&png_bytes);
 
-    let (info, px) = load_png(&png_bytes);
-    let mut out: Vec<u8> = vec![];
-    qoif_rs::encode(
-        alt_header.unwrap_or_else(||
-            QuiHeader::new(
-                info.width,
-                info.height,
-                match info.color_type {
-                    png::ColorType::Grayscale | png::ColorType::Rgb => qoif_types::QuiChannels::Rgb,
-                    png::ColorType::Indexed => todo!(),
-                    png::ColorType::GrayscaleAlpha | png::ColorType::Rgba => {
-                        qoif_types::QuiChannels::Rgba
-                    }
-                },
-                qoif_types::QuiColorSpace::SRgbWithLinearAlpha,
-            )),
-        px,
-        &mut out,
-    )
-    .unwrap();
+    let header = alt_header.unwrap_or_else(||
+        QoiHeader::new(
+            info.width,
+            info.height,
+            match info.color_type {
+                png::ColorType::Grayscale | png::ColorType::Rgb => qoif_types::QoiChannels::Rgb,
+                png::ColorType::Indexed => todo!(),
+                png::ColorType::GrayscaleAlpha | png::ColorType::Rgba => {
+                    qoif_types::QoiChannels::Rgba
+                }
+            },
+            qoif_types::QoiColorSpace::SRgbWithLinearAlpha,
+        ));
 
-    assert_eq!(out[0..14], qui_bytes[0..14], "Header should be equal!");
-    let found = std::iter::zip(out.iter(), qui_bytes.iter())
-        .enumerate()
-        .find(|(_, (l, r))| l != r);
-    assert_eq!(found, None, "Should not differ!");
-    assert_eq!(out.len(), qui_bytes.len(), "Should have the same length");
+    let our_qoi = qoif_rs::QoiEncoder::new(header, png_px.into_iter());
+
+    assert!(Iterator::eq(our_qoi, reference_qoi));
+
 }
 use png::OutputInfo;
 
-#[cfg(feature = "std")]
 fn load_png(data: &[u8]) -> (OutputInfo, Vec<Pixel>) {
     let mut result = vec![];
 

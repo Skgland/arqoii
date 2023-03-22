@@ -7,9 +7,9 @@ extern crate alloc;
 use std::io::Write;
 
 #[derive(Debug)]
-pub struct QuiMagic;
+pub struct QoiMagic;
 
-impl QuiMagic {
+impl QoiMagic {
     #[cfg(feature = "std")]
     pub fn encode<W: Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
         writer.write_all(b"qoif")?;
@@ -20,33 +20,33 @@ impl QuiMagic {
 
 #[derive(Debug, Clone)]
 #[repr(u8)]
-pub enum QuiChannels {
+pub enum QoiChannels {
     Rgb = 3,
     Rgba = 4,
 }
 
 #[derive(Debug, Clone)]
 #[repr(u8)]
-pub enum QuiColorSpace {
+pub enum QoiColorSpace {
     SRgbWithLinearAlpha = 0,
     AllChannelsLinear = 1,
 }
 
 #[derive(Debug)]
-pub struct QuiHeader {
+pub struct QoiHeader {
     #[allow(dead_code)]
-    magic: QuiMagic,
+    magic: QoiMagic,
     pub width: u32,
     pub height: u32,
-    pub channels: QuiChannels,
-    pub color_space: QuiColorSpace,
+    pub channels: QoiChannels,
+    pub color_space: QoiColorSpace,
 }
 
-impl QuiHeader {
+impl QoiHeader {
 
-    pub fn new(width: u32, height: u32, channels: QuiChannels, color_space: QuiColorSpace) -> Self {
+    pub fn new(width: u32, height: u32, channels: QoiChannels, color_space: QoiColorSpace) -> Self {
         Self {
-            magic: QuiMagic,
+            magic: QoiMagic,
             width,
             height,
             channels,
@@ -88,7 +88,7 @@ impl QuiHeader {
 }
 
 #[derive(Debug, Clone)]
-pub enum QuiChunk {
+pub enum QoiChunk {
     #[non_exhaustive]
     Rgb {
         r: u8,
@@ -124,7 +124,7 @@ pub enum QuiChunk {
     },
 }
 
-impl QuiChunk {
+impl QoiChunk {
     #[cfg(feature = "std")]
     pub fn encode<W: Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
         let mut buf = ChunkBuf::new();
@@ -176,32 +176,32 @@ impl QuiChunk {
 
     pub fn write_to_chunk_buffer(&self, buf: &mut ChunkBuf) {
         match self.clone() {
-            QuiChunk::Rgb { r, g, b } => {
+            QoiChunk::Rgb { r, g, b } => {
                 // [0b11111110] r g b
                 buf.set([0b11111110, r, g, b])
             },
-            QuiChunk::Rgba { r, g, b, a } => {
+            QoiChunk::Rgba { r, g, b, a } => {
                 // [0b11111111] r g b a
                 buf.set([0b11111111,r,g,b,a])
             },
-            QuiChunk::Index { idx } => {
+            QoiChunk::Index { idx } => {
                 // [ 0 0  idx idx idx idx idx idx]
                 buf.set([0b00111111 & idx])
             },
-            QuiChunk::Diff { dr, dg, db } => {
+            QoiChunk::Diff { dr, dg, db } => {
                 // [ 0 1 dr dr dg dg db db]
                 buf.set(
                 [0b01000000 | (0b00111111 & ((0b11 & dr) << 4 | (0b11 & dg) << 2 | (0b11 & db)))]
                 )
             },
-            QuiChunk::Luma { dg, dr_dg, db_dg } => {
+            QoiChunk::Luma { dg, dr_dg, db_dg } => {
                 // [ 1 0 dg dg dg dg dg dg] [ dr_dg dr_dg dr_dg dr_dg db_dg db_dg db_dg db_dg ]
                 buf.set([
                     0b10000000 | (0b00111111 & dg),
                     (0b1111 & dr_dg) << 4 | (0b1111 & db_dg),
                 ])
             },
-            QuiChunk::Run { run } => {
+            QoiChunk::Run { run } => {
                 // [ 1 1 run run run run run run ]
                 // Note: [ 1 1 1 1 1 1 1 1 ] & [ 1 1 1 1 1 1 1 0 ] are invalid here
 

@@ -10,7 +10,7 @@ use std::io::Write;
 
 pub use qoif_types as types;
 
-use types::{ChunkBuf, QuiChunk, QuiHeader};
+use types::{ChunkBuf, QoiChunk, QoiHeader};
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Pixel {
@@ -64,13 +64,13 @@ impl Default for CoderState {
     }
 }
 
-pub struct QuiChunkEncoder<I> {
+pub struct QoiChunkEncoder<I> {
     state: CoderState,
     pixel: I,
     peek: Option<Pixel>,
 }
 
-impl<I> QuiChunkEncoder<I> {
+impl<I> QoiChunkEncoder<I> {
     fn new(pixel: I) -> Self {
         Self {
             state: CoderState::default(),
@@ -80,8 +80,8 @@ impl<I> QuiChunkEncoder<I> {
     }
 }
 
-impl<I: Iterator<Item = Pixel>> Iterator for QuiChunkEncoder<I> {
-    type Item = QuiChunk;
+impl<I: Iterator<Item = Pixel>> Iterator for QoiChunkEncoder<I> {
+    type Item = QoiChunk;
 
     fn next(&mut self) -> Option<Self::Item> {
         let pixel = loop {
@@ -89,7 +89,7 @@ impl<I: Iterator<Item = Pixel>> Iterator for QuiChunkEncoder<I> {
                 // end of input pixels
                 // check if we have an in progress run
                 return if self.state.run > 0 {
-                    let run = QuiChunk::new_run(self.state.run);
+                    let run = QoiChunk::new_run(self.state.run);
                     self.state.run = 0;
                     Some(run)
                 } else {
@@ -104,7 +104,7 @@ impl<I: Iterator<Item = Pixel>> Iterator for QuiChunkEncoder<I> {
                     self.state.run = 0;
                     // we don't need to update the index or the previous  pixel as we are on a run
                     // and as such the pixel preceding the run has already set both correctly
-                    return Some(QuiChunk::new_run(62));
+                    return Some(QoiChunk::new_run(62));
                 }
 
                 if self.state.run == 1 {
@@ -126,7 +126,7 @@ impl<I: Iterator<Item = Pixel>> Iterator for QuiChunkEncoder<I> {
         if self.state.run > 0 {
             // clear out current run
             self.peek = Some(pixel);
-            let next = QuiChunk::new_run(self.state.run);
+            let next = QoiChunk::new_run(self.state.run);
             self.state.run = 0;
             return Some(next);
         }
@@ -136,7 +136,7 @@ impl<I: Iterator<Item = Pixel>> Iterator for QuiChunkEncoder<I> {
 
         let chunk = if self.state.index[idx as usize] == pixel {
             // we have a matching index so use that
-            QuiChunk::new_index(idx)
+            QoiChunk::new_index(idx)
         } else if pixel.a == self.state.previous.a {
             // old_{r,g,b} + d{r,g,b} = new_{r,g,b}
             // d{r,g,b} = new_{r,g,b} - old_{r,g,b}
@@ -147,7 +147,7 @@ impl<I: Iterator<Item = Pixel>> Iterator for QuiChunkEncoder<I> {
 
             if (-2..=1).contains(&dr) && (-2..=1).contains(&dg) && (-2..=1).contains(&db) {
                 // we can encode it as a diff op so use that
-                QuiChunk::new_diff(dr, dg, db)
+                QoiChunk::new_diff(dr, dg, db)
             } else {
                 let dr_dg = dr.wrapping_sub(dg);
                 let db_dg = db.wrapping_sub(dg);
@@ -157,15 +157,15 @@ impl<I: Iterator<Item = Pixel>> Iterator for QuiChunkEncoder<I> {
                     && (-8..=7).contains(&db_dg)
                 {
                     // luma encoding is possible so use that
-                    QuiChunk::new_luma(dg, dr_dg, db_dg)
+                    QoiChunk::new_luma(dg, dr_dg, db_dg)
                 } else {
                     // fallback to rgb as we already checked that alpha matches
-                    QuiChunk::new_rgb(pixel.r, pixel.g, pixel.b)
+                    QoiChunk::new_rgb(pixel.r, pixel.g, pixel.b)
                 }
             }
         } else {
             // no run, no index match and different alpha, so we need to fallback to rgba
-            QuiChunk::new_rgba(pixel.r, pixel.g, pixel.b, pixel.a)
+            QoiChunk::new_rgba(pixel.r, pixel.g, pixel.b, pixel.a)
         };
 
         self.state.index[idx as usize] = pixel.clone();
@@ -175,22 +175,27 @@ impl<I: Iterator<Item = Pixel>> Iterator for QuiChunkEncoder<I> {
 }
 
 
-impl<I> FusedIterator for QuiChunkEncoder<I> where QuiChunkEncoder<I>: Iterator, I: FusedIterator {}
+impl<I> FusedIterator for QoiChunkEncoder<I> where QoiChunkEncoder<I>: Iterator, I: FusedIterator {}
 
-pub struct QuiEncoder<I> {
-    chunks: QuiChunkEncoder<I>,
+pub struct QoiEncoder<I> {
+    chunks: QoiChunkEncoder<I>,
     header_bytes: [u8; 14],
     header_offset: usize,
     buf: ChunkBuf,
     footer_offset: usize,
 }
-impl<I> QuiEncoder<I>
+impl<I> QoiEncoder<I>
 where
     I: Iterator<Item = Pixel>,
 {
-    fn new(header: QuiHeader, pixels: I) -> Self {
+    /// Create a new streaming Qoi Encoder
+    ///
+    /// # Note
+    /// the encoder will not stop after width * height pixels on its own!
+    /// ensure that the iterator results in the right amount of pixel or the resulting image will be malformed!
+    pub fn new(header: QoiHeader, pixels: I) -> Self {
         Self {
-            chunks: QuiChunkEncoder::new(pixels),
+            chunks: QoiChunkEncoder::new(pixels),
             header_bytes: header.to_bytes(),
             header_offset: 0,
             buf: ChunkBuf::new(),
@@ -199,11 +204,11 @@ where
     }
 }
 
-impl<I> FusedIterator for QuiEncoder<I> where QuiEncoder<I>: Iterator, QuiChunkEncoder<I>: FusedIterator {}
+impl<I> FusedIterator for QoiEncoder<I> where QoiEncoder<I>: Iterator, QoiChunkEncoder<I>: FusedIterator {}
 
-pub const QUI_FOOTER: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 1];
+pub const QOI_FOOTER: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 1];
 
-impl<I: Iterator<Item = Pixel>> Iterator for QuiEncoder<I> {
+impl<I: Iterator<Item = Pixel>> Iterator for QoiEncoder<I> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -221,9 +226,9 @@ impl<I: Iterator<Item = Pixel>> Iterator for QuiEncoder<I> {
             let next = self.buf.pop();
             debug_assert!(next.is_some());
             next
-        } else if self.footer_offset < QUI_FOOTER.len() {
+        } else if self.footer_offset < QOI_FOOTER.len() {
             // we still have footer left so return the next footer byte
-            let next = QUI_FOOTER[self.footer_offset];
+            let next = QOI_FOOTER[self.footer_offset];
             self.footer_offset += 1;
             Some(next)
         } else {
@@ -235,7 +240,7 @@ impl<I: Iterator<Item = Pixel>> Iterator for QuiEncoder<I> {
 
 #[cfg(feature = "std")]
 pub fn encode<I, W: Write>(
-    header: QuiHeader,
+    header: QoiHeader,
     pixels: I,
     writer: &mut W,
 ) -> Result<(), std::io::Error>
@@ -245,7 +250,7 @@ where
     let size = (header.width as u64) * (header.height as u64);
 
     let data: Vec<_> =
-        QuiEncoder::new(header, pixels.into_iter().take(size as usize).fuse()).collect();
+        QoiEncoder::new(header, pixels.into_iter().take(size as usize).fuse()).collect();
 
     writer.write_all(&data)?;
 
