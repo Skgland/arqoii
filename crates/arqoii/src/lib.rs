@@ -1,8 +1,6 @@
 #![no_std]
 
-
-use core::{default::Default, iter::{FusedIterator}};
-
+use core::{default::Default, iter::FusedIterator};
 
 pub use arqoii_types as types;
 
@@ -129,7 +127,6 @@ impl<I: Iterator<Item = Pixel>> Iterator for QoiChunkEncoder<I> {
 
         let idx = pixel.pixel_hash();
 
-
         let chunk = if self.state.index[idx as usize] == pixel {
             // we have a matching index so use that
             QoiChunk::new_index(idx)
@@ -170,8 +167,12 @@ impl<I: Iterator<Item = Pixel>> Iterator for QoiChunkEncoder<I> {
     }
 }
 
-
-impl<I> FusedIterator for QoiChunkEncoder<I> where QoiChunkEncoder<I>: Iterator, I: FusedIterator {}
+impl<I> FusedIterator for QoiChunkEncoder<I>
+where
+    QoiChunkEncoder<I>: Iterator,
+    I: FusedIterator,
+{
+}
 
 pub struct QoiEncoder<I> {
     chunks: QoiChunkEncoder<I>,
@@ -200,7 +201,12 @@ where
     }
 }
 
-impl<I> FusedIterator for QoiEncoder<I> where QoiEncoder<I>: Iterator, QoiChunkEncoder<I>: FusedIterator {}
+impl<I> FusedIterator for QoiEncoder<I>
+where
+    QoiEncoder<I>: Iterator,
+    QoiChunkEncoder<I>: FusedIterator,
+{
+}
 
 pub const QOI_FOOTER: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 1];
 
