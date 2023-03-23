@@ -3,6 +3,7 @@
 use core::{default::Default, iter::FusedIterator};
 
 pub use arqoii_types as types;
+pub use arqoii_types::{QOI_FOOTER, QOI_MAGIC};
 
 use types::{ChunkBuf, QoiChunk, QoiHeader};
 
@@ -208,7 +209,6 @@ where
 {
 }
 
-pub const QOI_FOOTER: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 1];
 
 impl<I: Iterator<Item = Pixel>> Iterator for QoiEncoder<I> {
     type Item = u8;

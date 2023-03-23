@@ -1,6 +1,7 @@
 #![no_std]
 
-const QOI_MAGIC: [u8; 4] = *b"qoif";
+pub const QOI_MAGIC: [u8; 4] = *b"qoif";
+pub const QOI_FOOTER: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 1];
 
 #[derive(Debug, Clone)]
 #[repr(u8)]
