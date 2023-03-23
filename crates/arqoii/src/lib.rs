@@ -1,6 +1,6 @@
 #![no_std]
 
-use core::{default::Default, iter::FusedIterator};
+use core::{default::Default, iter::FusedIterator, mem::MaybeUninit};
 
 pub use arqoii_types as types;
 pub use arqoii_types::{QOI_FOOTER, QOI_MAGIC};
@@ -236,6 +236,242 @@ impl<I: Iterator<Item = Pixel>> Iterator for QoiEncoder<I> {
         } else {
             // done
             None
+        }
+    }
+}
+
+struct PeekN<const N: usize, I, Item> {
+    iter: I,
+    peek: [Option<Item>; N],
+}
+
+impl<const N: usize, I, Item> PeekN<N, I, Item> {
+    fn new(iter: I) -> Self {
+        Self {
+            iter,
+            peek: [(); N].map(|_| None),
+        }
+    }
+
+    fn peek(&mut self) -> Option<[&Item; N]>
+    where
+        I: Iterator<Item = Item>,
+    {
+
+        // rotate the first remaining peek value to the front
+        let rotate = self.peek.iter().enumerate().find_map(|(idx, elem)| elem.is_some().then_some(idx)).unwrap_or(0);
+        self.peek.rotate_left(rotate);
+
+        let mut peek = [();N] .map(|_| MaybeUninit::uninit());
+        let mut count = 0;
+
+        for elem in self.peek
+            .iter_mut()
+            .flat_map(|elem| {
+                if elem.is_none() {
+                    *elem = self.iter.next();
+                }
+                elem.as_ref()
+            }) {
+                peek[count].write(elem);
+                count += 1;
+        }
+
+        if count == N {
+            // Safety count is N and as such all indices 0 to N - 1 have been written to
+            Some(unsafe { core::mem::transmute_copy::<[MaybeUninit<&Item>;N], [&Item;N]>(&peek) })
+        } else {
+            None
+        }
+    }
+}
+
+impl<const N: usize, I: Iterator> Iterator for PeekN<N, I, I::Item> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.peek
+            .iter_mut()
+            .find_map(|elem| elem.take())
+            .or_else(|| self.iter.next())
+    }
+}
+
+impl<const N: usize, I, Item> FusedIterator for PeekN<N, I, Item>
+where
+    I: FusedIterator,
+    PeekN<N, I, Item>: Iterator,
+{
+}
+
+pub struct QoiChunkDecoder<I> {
+    bytes: PeekN<7, I, u8>,
+}
+impl<I> QoiChunkDecoder<I> {
+    fn new(iter: I) -> QoiChunkDecoder<I> where I: Iterator<Item = u8> {
+        Self {
+            bytes: PeekN::new(iter),
+        }
+    }
+}
+
+impl<I: Iterator<Item = u8>> Iterator for QoiChunkDecoder<I> {
+    type Item = QoiChunk;
+    fn next(&mut self) -> Option<Self::Item> {
+        let init = self.bytes.next()?;
+
+        if init == 0b11111111 {
+            // rgba
+            let r = self.bytes.next()?;
+            let g = self.bytes.next()?;
+            let b = self.bytes.next()?;
+            let a = self.bytes.next()?;
+            Some(QoiChunk::new_rgba(r, g, b, a))
+        } else if init == 0b11111110 {
+            // rgb
+            let r = self.bytes.next()?;
+            let g = self.bytes.next()?;
+            let b = self.bytes.next()?;
+            Some(QoiChunk::new_rgb(r, g, b))
+        } else {
+            let short = init >> 6;
+            if short == 0b00 {
+                // index
+                if init == 0 {
+                    if let Some(peek) = self.bytes.peek() {
+                        if QOI_FOOTER[1..] == peek.map(|elem|*elem) {
+                            // we are done, init is the start of the footer
+                            // note: this means that this is not a fused iterator
+                            return None;
+                        }
+                    }
+                }
+
+                Some(QoiChunk::new_index(init & 0b00111111))
+            } else if short == 0b01 {
+                // diff
+                Some(QoiChunk::new_diff(
+                    ((init >> 4) & 0b00000011) as i8 - 2,
+                    ((init >> 2) & 0b00000011) as i8 - 2,
+                    (init & 0b00000011) as i8 - 2,
+                ))
+            } else if short == 0b10 {
+                // luma
+                let next = self.bytes.next()?;
+                Some(QoiChunk::new_luma(
+                    (init & 0b00111111) as i8 - 32,
+                    ((next >> 4) & 0b00001111) as i8 - 8,
+                    (next & 0b00001111) as i8 - 8,
+                ))
+            } else {
+                debug_assert_eq!(short, 0b11);
+                // run
+                Some(QoiChunk::new_run((init & 0b00111111) + 1))
+            }
+        }
+    }
+}
+
+struct QoiDecoder<I> {
+    state: CoderState,
+    chunks: QoiChunkDecoder<I>,
+}
+
+impl<I: Iterator<Item = u8>> QoiDecoder<I> {
+    fn new(mut iter: I) -> Option<(QoiHeader, Self)> {
+        let magic = [iter.next()?,iter.next()?,iter.next()?,iter.next()?];
+
+        if magic != QOI_MAGIC {
+            return None;
+        }
+
+        let width = u32::from_be_bytes([iter.next()?,iter.next()?,iter.next()?,iter.next()?]);
+        let height = u32::from_be_bytes([iter.next()?,iter.next()?,iter.next()?,iter.next()?]);
+        let channels = match iter.next()? {
+            3 => types::QoiChannels::Rgb,
+            4 => types::QoiChannels::Rgba,
+            _ => return None,
+        };
+        let color_space = match iter.next()? {
+            0 => types::QoiColorSpace::SRgbWithLinearAlpha,
+            1 => types::QoiColorSpace::AllChannelsLinear,
+            _ => return None,
+        };
+
+        Some((QoiHeader::new(width, height, channels, color_space), Self {
+            state: CoderState::default(),
+            chunks: QoiChunkDecoder::new(iter),
+        }))
+    }
+}
+
+impl<I> Iterator for QoiDecoder<I>
+where
+    QoiChunkDecoder<I>: Iterator<Item = QoiChunk>,
+{
+    type Item = Pixel;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.state.run > 0 {
+            self.state.run -= 1;
+            Some(self.state.previous.clone())
+        } else {
+            let chunk = self.chunks.next()?;
+
+            match chunk {
+                QoiChunk::Rgb { r, g, b, .. } => {
+                    let next = Pixel {
+                        r,
+                        g,
+                        b,
+                        a: self.state.previous.a,
+                    };
+                    self.state.previous = next.clone();
+                    self.state.index[next.pixel_hash() as usize] = next.clone();
+                    Some(next)
+                }
+                QoiChunk::Rgba { r, g, b, a, .. } => {
+                    let next = Pixel { r, g, b, a };
+                    self.state.previous = next.clone();
+                    self.state.index[next.pixel_hash() as usize] = next.clone();
+                    Some(next)
+                }
+                QoiChunk::Index { idx, .. } => {
+                    let next = self.state.index[idx as usize].clone();
+                    self.state.previous = next.clone();
+                    Some(next)
+                }
+                QoiChunk::Diff { dr, dg, db, .. } => {
+                    let next = Pixel {
+                        r: self.state.previous.r.wrapping_add_signed(dr),
+                        g: self.state.previous.r.wrapping_add_signed(dg),
+                        b: self.state.previous.r.wrapping_add_signed(db),
+                        a: self.state.previous.a,
+                    };
+                    self.state.previous = next.clone();
+                    self.state.index[next.pixel_hash() as usize] = next.clone();
+                    Some(next)
+                }
+                QoiChunk::Luma {
+                    dg, dr_dg, db_dg, ..
+                } => {
+                    let next = Pixel {
+                        r: self.state.previous.r.wrapping_add_signed(dr_dg + dg),
+                        g: self.state.previous.r.wrapping_add_signed(dg),
+                        b: self.state.previous.r.wrapping_add_signed(db_dg + dg),
+                        a: self.state.previous.a,
+                    };
+                    self.state.previous = next.clone();
+                    self.state.index[next.pixel_hash() as usize] = next.clone();
+                    Some(next)
+                }
+                QoiChunk::Run { run, .. } => {
+                    let next = self.state.previous.clone();
+                    self.state.run = run - 1;
+                    self.state.index[next.pixel_hash() as usize] = next.clone();
+                    Some(next)
+                }
+            }
         }
     }
 }
