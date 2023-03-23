@@ -64,27 +64,27 @@ pub enum QoiChunk {
     #[non_exhaustive]
     Rgba { r: u8, g: u8, b: u8, a: u8 },
     #[non_exhaustive]
-    Index { idx: u8 /* u6 */ },
+    Index { idx: u8 /* u6 0..=63 */ },
     #[non_exhaustive]
     Diff {
-        dr: u8, /* u2 */
-        dg: u8, /* u2 */
-        db: u8, /* u2 */
+        dr: i8, /* i2 -2..=1 */
+        dg: i8, /* i2 -2..=1 */
+        db: i8, /* i2 -2..=1 */
     },
     #[non_exhaustive]
     Luma {
-        dg: u8,    /* u6 */
-        dr_dg: u8, /* u4 */
-        db_dg: u8, /* u4 */
+        dg: i8,    /* i6 -32..=31 */
+        dr_dg: i8, /* i4 -8..=7 */
+        db_dg: i8, /* i4 -8..=7 */
     },
     #[non_exhaustive]
-    Run { run: u8, /* u6, except 63 & 64*/ },
+    Run { run: u8, /* u6, 1..=62 */ },
 }
 
 impl QoiChunk {
     pub fn new_run(run: u8) -> Self {
-        debug_assert!(run <= 62);
-        Self::Run { run: run - 1 }
+        debug_assert!(0 < run && run <= 62);
+        Self::Run { run }
     }
 
     pub fn new_index(idx: u8) -> Self {
@@ -98,9 +98,9 @@ impl QoiChunk {
         debug_assert!((-2..=1).contains(&db));
 
         Self::Diff {
-            dr: (dr + 2) as u8,
-            dg: (dg + 2) as u8,
-            db: (db + 2) as u8,
+            dr,
+            dg,
+            db,
         }
     }
 
@@ -110,9 +110,9 @@ impl QoiChunk {
         debug_assert!((-8..=7).contains(&db_dg));
 
         Self::Luma {
-            dg: (dg + 32) as u8,
-            dr_dg: (dr_dg + 8) as u8,
-            db_dg: (db_dg + 8) as u8,
+            dg,
+            dr_dg,
+            db_dg,
         }
     }
 
@@ -140,24 +140,21 @@ impl QoiChunk {
             QoiChunk::Diff { dr, dg, db } => {
                 // [ 0 1 dr dr dg dg db db]
                 buf.set([
-                    0b01000000 | (0b00111111 & ((0b11 & dr) << 4 | (0b11 & dg) << 2 | (0b11 & db)))
+                    0b01000000 | (0b00111111 & ((0b11 & (dr + 2) as u8) << 4 | (0b11 & (dg + 2) as u8) << 2 | (0b11 & (db + 2) as u8)))
                 ])
             }
             QoiChunk::Luma { dg, dr_dg, db_dg } => {
                 // [ 1 0 dg dg dg dg dg dg] [ dr_dg dr_dg dr_dg dr_dg db_dg db_dg db_dg db_dg ]
                 buf.set([
-                    0b10000000 | (0b00111111 & dg),
-                    (0b1111 & dr_dg) << 4 | (0b1111 & db_dg),
+                    0b10000000 | (0b00111111 & (dg + 32) as u8),
+                    (0b1111 & (dr_dg + 8) as u8) << 4 | (0b1111 & (db_dg + 8) as u8),
                 ])
             }
             QoiChunk::Run { run } => {
                 // [ 1 1 run run run run run run ]
                 // Note: [ 1 1 1 1 1 1 1 1 ] & [ 1 1 1 1 1 1 1 0 ] are invalid here
-
-                debug_assert_ne!((run & 0b00111111), 0b00111111);
-                debug_assert_ne!((run & 0b00111111), 0b00111110);
-
-                buf.set([0b11000000 | (0b00111111 & run)]);
+                debug_assert!(run <= 62);
+                buf.set([0b11000000 | (run - 1)]);
             }
         }
     }
