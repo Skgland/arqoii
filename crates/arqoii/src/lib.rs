@@ -444,8 +444,8 @@ where
                 QoiChunk::Diff { dr, dg, db, .. } => {
                     let next = Pixel {
                         r: self.state.previous.r.wrapping_add_signed(dr),
-                        g: self.state.previous.r.wrapping_add_signed(dg),
-                        b: self.state.previous.r.wrapping_add_signed(db),
+                        g: self.state.previous.g.wrapping_add_signed(dg),
+                        b: self.state.previous.b.wrapping_add_signed(db),
                         a: self.state.previous.a,
                     };
                     self.state.previous = next.clone();
@@ -457,8 +457,8 @@ where
                 } => {
                     let next = Pixel {
                         r: self.state.previous.r.wrapping_add_signed(dr_dg + dg),
-                        g: self.state.previous.r.wrapping_add_signed(dg),
-                        b: self.state.previous.r.wrapping_add_signed(db_dg + dg),
+                        g: self.state.previous.g.wrapping_add_signed(dg),
+                        b: self.state.previous.b.wrapping_add_signed(db_dg + dg),
                         a: self.state.previous.a,
                     };
                     self.state.previous = next.clone();
