@@ -3,21 +3,21 @@
 pub const QOI_MAGIC: [u8; 4] = *b"qoif";
 pub const QOI_FOOTER: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 1];
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(u8)]
 pub enum QoiChannels {
     Rgb = 3,
     Rgba = 4,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(u8)]
 pub enum QoiColorSpace {
     SRgbWithLinearAlpha = 0,
     AllChannelsLinear = 1,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct QoiHeader {
     pub width: u32,
     pub height: u32,
@@ -57,7 +57,7 @@ impl QoiHeader {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum QoiChunk {
     #[non_exhaustive]
     Rgb { r: u8, g: u8, b: u8 },

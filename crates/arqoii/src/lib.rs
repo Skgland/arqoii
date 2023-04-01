@@ -66,7 +66,7 @@ pub struct QoiChunkEncoder<I> {
 }
 
 impl<I> QoiChunkEncoder<I> {
-    fn new(pixel: I) -> Self {
+    pub fn new(pixel: I) -> Self {
         Self {
             state: CoderState::default(),
             pixel,
@@ -308,7 +308,7 @@ pub struct QoiChunkDecoder<I> {
     bytes: PeekN<7, I, u8>,
 }
 impl<I> QoiChunkDecoder<I> {
-    fn new(iter: I) -> QoiChunkDecoder<I> where I: Iterator<Item = u8> {
+    pub fn new(iter: I) -> QoiChunkDecoder<I> where I: Iterator<Item = u8> {
         Self {
             bytes: PeekN::new(iter),
         }
@@ -372,13 +372,13 @@ impl<I: Iterator<Item = u8>> Iterator for QoiChunkDecoder<I> {
     }
 }
 
-struct QoiDecoder<I> {
+pub struct QoiDecoder<I> {
     state: CoderState,
     chunks: QoiChunkDecoder<I>,
 }
 
 impl<I: Iterator<Item = u8>> QoiDecoder<I> {
-    fn new(mut iter: I) -> Option<(QoiHeader, Self)> {
+    pub fn new(mut iter: I) -> Option<(QoiHeader, Self)> {
         let magic = [iter.next()?,iter.next()?,iter.next()?,iter.next()?];
 
         if magic != QOI_MAGIC {
