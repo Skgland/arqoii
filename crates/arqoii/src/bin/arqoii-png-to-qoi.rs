@@ -1,66 +1,20 @@
-use arqoii::{Pixel, QoiEncoder};
-use arqoii_types::{QoiChannels, QoiColorSpace, QoiHeader};
 
-#[test]
-fn dice() {
-    transcode("qoi/dice", None);
+fn main() {
+   for arg in std::env::args().skip(1) {
+        let src: &Path = arg.as_ref();
+        if src.extension() == Some("png".as_ref()) {
+            let dest = src.with_extension("qoi");
+            transcode(src, &dest);
+        }
+   }
 }
 
-#[test]
-fn edgecase() {
-    transcode(
-        "qoi/edgecase",
-        Some(QoiHeader::new(
-            256,
-            64,
-            QoiChannels::Rgba,
-            QoiColorSpace::SRgbWithLinearAlpha,
-        )),
-    );
-}
+fn transcode(src: &Path, dest: &Path) {
 
-#[test]
-fn kodim10() {
-    transcode("qoi/kodim10", None);
-}
-
-#[test]
-fn kodim23() {
-    transcode("qoi/kodim23", None);
-}
-
-#[test]
-fn qoi_logo() {
-    transcode("qoi/qoi_logo", None);
-}
-
-#[test]
-fn qoi_logo240x135() {
-    transcode("qoi/qoi_logo-240x135", None);
-}
-
-#[test]
-fn testcard_rgba() {
-    transcode("qoi/testcard_rgba", None);
-}
-
-#[test]
-fn testcard() {
-    transcode("qoi/testcard", None);
-}
-
-#[test]
-fn wikipedia_008() {
-    transcode("qoi/wikipedia_008", None);
-}
-
-fn transcode(name: &str, alt_header: Option<QoiHeader>) {
-    let reference_qoi = std::fs::read(format!("tests/test-images/{name}.qoi")).unwrap();
-
-    let png_bytes = std::fs::read(format!("tests/test-images/{name}.png")).unwrap();
+    let png_bytes = std::fs::read(src).unwrap();
     let (info, png_px) = load_png(&png_bytes);
 
-    let header = alt_header.unwrap_or_else(|| {
+    let header = 
         QoiHeader::new(
             info.width,
             info.height,
@@ -70,13 +24,16 @@ fn transcode(name: &str, alt_header: Option<QoiHeader>) {
                 png::ColorType::GrayscaleAlpha | png::ColorType::Rgba => QoiChannels::Rgba,
             },
             QoiColorSpace::SRgbWithLinearAlpha,
-        )
-    });
+        );
 
-    let our_qoi = QoiEncoder::new(header, png_px.into_iter());
-
-    assert!(Iterator::eq(our_qoi, reference_qoi));
+    let qoi = QoiEncoder::new(header, png_px.into_iter()).collect::<Vec<_>>();
+    std::fs::write(dest, qoi).unwrap();
 }
+
+use std::path::Path;
+
+use arqoii::{QoiEncoder, Pixel};
+use arqoii_types::{QoiHeader, QoiChannels, QoiColorSpace};
 use png::OutputInfo;
 
 fn load_png(data: &[u8]) -> (OutputInfo, Vec<Pixel>) {

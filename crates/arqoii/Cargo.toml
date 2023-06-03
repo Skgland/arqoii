@@ -8,8 +8,17 @@ description = "A library for encoding images into to qoi image format"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "arqoii-png-tp-qoi"
+path = "src/bin/arqoii-png-to-qoi.rs"
+required-features = ["png"]
+
+[feature]
+png = ["dep:png"]
+
 [dependencies]
 arqoii-types = { workspace = true }
+png = { workspace = true, optional = true }
 
 [dev-dependencies]
 png = { workspace = true }
