@@ -1,7 +1,67 @@
 #![no_std]
 
+/// The byte sequence beginning the **Qoi F**ormat Header
 pub const QOI_MAGIC: [u8; 4] = *b"qoif";
+
+/// The byte sequence marking the end of a Qoi File
 pub const QOI_FOOTER: [u8; 8] = [0, 0, 0, 0, 0, 0, 0, 1];
+
+/// A single RGB/RGBA pixel
+///
+/// In case of RGB the alpha value should always be 255
+///
+/// For RGBA the values should be un-premultiplied alpha
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct Pixel {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
+}
+
+impl Pixel {
+    /// A Pixel with all channels set to 0
+    pub const ZERO: Self = Pixel {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 0,
+    };
+
+    pub fn rgb(r: u8, g: u8, b: u8) -> Self {
+        Self::rgba(r, g, b, 255)
+    }
+
+    pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self { r, g, b, a }
+    }
+
+    /// Calculate the Pixel Hash as described by the Qoi Specification
+    pub fn pixel_hash(&self) -> u8 {
+        (((self.r as usize) * 3
+            + (self.g as usize) * 5
+            + (self.b as usize) * 7
+            + (self.a as usize) * 11)
+            % 64) as u8
+    }
+}
+
+/// The internal state of a Qoi{De,En}coder
+pub struct CoderState {
+    pub previous: Pixel,
+    pub index: [Pixel; 64],
+    pub run: u8,
+}
+
+impl Default for CoderState {
+    fn default() -> Self {
+        Self {
+            previous: Pixel::rgba(0, 0, 0, 255),
+            index: [Pixel::ZERO; 64],
+            run: 0,
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(u8)]
@@ -17,6 +77,7 @@ pub enum QoiColorSpace {
     AllChannelsLinear = 1,
 }
 
+/// A struct representing the Qoi Format File Header
 #[derive(Debug, PartialEq, Eq)]
 pub struct QoiHeader {
     pub width: u32,
@@ -57,6 +118,8 @@ impl QoiHeader {
     }
 }
 
+/// An individual Chunk,
+/// representing between 1 and 62 pixel
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum QoiChunk {
     #[non_exhaustive]
@@ -82,16 +145,19 @@ pub enum QoiChunk {
 }
 
 impl QoiChunk {
+    /// Create a new Run Chunk, run needs to be in the range 0..=62
     pub fn new_run(run: u8) -> Self {
         debug_assert!(0 < run && run <= 62);
         Self::Run { run }
     }
 
+    // Create a new Index Chunk, index needs to be at most 63
     pub fn new_index(idx: u8) -> Self {
         debug_assert!(idx <= 63);
         Self::Index { idx }
     }
 
+    // Create a new Diff Chunk, all arguments need to be in the range -1..=1
     pub fn new_diff(dr: i8, dg: i8, db: i8) -> Self {
         debug_assert!((-2..=1).contains(&dr));
         debug_assert!((-2..=1).contains(&dg));
@@ -100,6 +166,7 @@ impl QoiChunk {
         Self::Diff { dr, dg, db }
     }
 
+    // Create a new Luma Chunk, dg needs to be in the range -32..=31, dr_dg and db_dg need to be in the range -8..=7
     pub fn new_luma(dg: i8, dr_dg: i8, db_dg: i8) -> Self {
         debug_assert!((-32..=31).contains(&dg));
         debug_assert!((-8..=7).contains(&dr_dg));
@@ -108,14 +175,18 @@ impl QoiChunk {
         Self::Luma { dg, dr_dg, db_dg }
     }
 
+    // Creates a new RGB Chunk
     pub fn new_rgb(r: u8, g: u8, b: u8) -> Self {
         Self::Rgb { r, g, b }
     }
+
+    // Creates a new RGBA Chunk
     pub fn new_rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self::Rgba { r, g, b, a }
     }
 
-    pub fn write_to_chunk_buffer(&self, buf: &mut ChunkBuf) {
+    /// Write the Chunk into the provided ChunkBuf
+    fn write_to_chunk_buffer(&self, buf: &mut ChunkBuf) {
         match self.clone() {
             QoiChunk::Rgb { r, g, b } => {
                 // [0b11111110] r g b
@@ -154,10 +225,25 @@ impl QoiChunk {
     }
 }
 
+impl IntoIterator for QoiChunk {
+    type Item = u8;
+
+    type IntoIter = ChunkBuf;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let mut buf = ChunkBuf::new();
+        self.write_to_chunk_buffer(&mut buf);
+        buf
+    }
+}
+
+/// A buffer for the bytes of a single Chunk
+///
+/// used to iterate over the bytes of a Chunk
 pub struct ChunkBuf {
     data: [u8; 5],
-    len: usize,
-    offset: usize,
+    len: u8,
+    offset: u8,
 }
 
 trait ChunkData {}
@@ -169,6 +255,7 @@ impl ChunkData for [u8; 4] {}
 impl ChunkData for [u8; 5] {}
 
 impl ChunkBuf {
+    /// Create a new empty ChunkBuf
     pub fn new() -> Self {
         ChunkBuf {
             data: [0; 5],
@@ -177,16 +264,7 @@ impl ChunkBuf {
         }
     }
 
-    pub fn pop(&mut self) -> Option<u8> {
-        if self.offset < self.len {
-            let res = self.data[self.offset];
-            self.offset += 1;
-            Some(res)
-        } else {
-            None
-        }
-    }
-
+    /// Set the content of the ChunkBuf
     fn set<const N: usize>(&mut self, data: [u8; N])
     where
         [u8; N]: ChunkData,
@@ -195,11 +273,26 @@ impl ChunkBuf {
             self.data[i] = data[i];
         });
         self.offset = 0;
-        self.len = N;
+        self.len = N as u8;
     }
 
+    /// Get the data of the last written Chunk, this includes already popped bytes
     pub fn as_slice(&self) -> &[u8] {
-        &self.data[0..self.len]
+        &self.data[0..self.len as usize]
+    }
+}
+
+impl Iterator for ChunkBuf {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.offset < self.len {
+            let res = self.data[self.offset as usize];
+            self.offset += 1;
+            Some(res)
+        } else {
+            None
+        }
     }
 }
 

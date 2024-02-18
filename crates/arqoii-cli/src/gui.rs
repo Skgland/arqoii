@@ -1,3 +1,4 @@
+use arqoii::types::QoiChannels;
 use eframe::{
     egui::{
         self,
@@ -58,14 +59,14 @@ impl ImageLoader for QoiLoader {
                     let size = [header.width as usize, header.height as usize];
 
                     let image = match header.channels {
-                        arqoii_types::QoiChannels::Rgb => ColorImage::from_rgb(
+                        QoiChannels::Rgb => ColorImage::from_rgb(
                             size,
                             &pixel
                                 .into_iter()
                                 .flat_map(|px| [px.r, px.g, px.b])
                                 .collect::<Vec<_>>(),
                         ),
-                        arqoii_types::QoiChannels::Rgba => ColorImage::from_rgba_unmultiplied(
+                        QoiChannels::Rgba => ColorImage::from_rgba_unmultiplied(
                             size,
                             &pixel
                                 .into_iter()

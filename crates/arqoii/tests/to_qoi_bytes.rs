@@ -1,5 +1,5 @@
-use arqoii::{Pixel, QoiEncoder};
-use arqoii_types::{QoiChannels, QoiColorSpace, QoiHeader};
+use arqoii::encode::QoiEncoder;
+use arqoii_types::{Pixel, QoiChannels, QoiColorSpace, QoiHeader};
 
 #[test]
 fn dice() {

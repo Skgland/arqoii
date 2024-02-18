@@ -1,7 +1,10 @@
 use std::path::Path;
 
-use arqoii::{Pixel, QoiDecoder, QoiEncoder};
-use arqoii_types::{QoiChannels, QoiColorSpace, QoiHeader};
+use arqoii::{
+    decode::QoiDecoder,
+    encode::QoiEncoder,
+    types::{Pixel, QoiChannels, QoiColorSpace, QoiHeader},
+};
 
 pub fn save(channels: QoiChannels, (width, height): (u32, u32), px: &[Pixel], dest: &Path) {
     let header = QoiHeader::new(width, height, channels, QoiColorSpace::SRgbWithLinearAlpha);

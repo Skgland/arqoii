@@ -1,5 +1,5 @@
-use arqoii::Pixel;
-use arqoii_types::{QoiChannels, QoiColorSpace, QoiHeader};
+use arqoii::decode::QoiDecoder;
+use arqoii_types::{Pixel, QoiChannels, QoiColorSpace, QoiHeader};
 
 #[test]
 fn dice() {
@@ -68,7 +68,7 @@ fn transcode(name: &str, alt_header: Option<QoiHeader>) {
         )
     });
 
-    let (header, decoder) = arqoii::QoiDecoder::new(reference_qoi.into_iter()).unwrap();
+    let (header, decoder) = QoiDecoder::new(reference_qoi.into_iter()).unwrap();
 
     let our_px = decoder;
 

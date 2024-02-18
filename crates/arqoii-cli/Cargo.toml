@@ -9,7 +9,6 @@ repository.workspace = true
 
 [dependencies]
 arqoii = { workspace = true }
-arqoii-types = { workspace = true }
 clap = { workspace = true }
 eframe = "0.26.2"
 png = { workspace = true }

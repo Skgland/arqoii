@@ -3,8 +3,7 @@ use std::{
     path::Path,
 };
 
-use arqoii::Pixel;
-use arqoii_types::QoiChannels;
+use arqoii::types::{Pixel, QoiChannels};
 use png::Transformations;
 
 pub fn load(data: &[u8]) -> (QoiChannels, (u32, u32), Vec<Vec<Pixel>>) {

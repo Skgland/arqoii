@@ -1,5 +1,5 @@
-use arqoii::Pixel;
-use arqoii_types::{QoiChannels, QoiColorSpace, QoiHeader};
+use arqoii::{decode::QoiChunkDecoder, encode::QoiChunkEncoder};
+use arqoii_types::{Pixel, QoiChannels, QoiColorSpace, QoiHeader};
 
 #[test]
 fn dice() {
@@ -55,8 +55,8 @@ fn transcode(name: &str, _alt_header: Option<QoiHeader>) {
 
     let (_info, reference_px) = load_png(&png_bytes);
 
-    let encoder = arqoii::QoiChunkEncoder::new(reference_px.into_iter());
-    let decoder = arqoii::QoiChunkDecoder::new(reference_qoi[14..].iter().cloned());
+    let encoder = QoiChunkEncoder::new(reference_px.into_iter());
+    let decoder = QoiChunkDecoder::new(reference_qoi[14..].iter().cloned());
 
     assert!(Iterator::eq(encoder, decoder));
 }
