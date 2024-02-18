@@ -177,8 +177,9 @@ impl<I: Iterator<Item = Pixel>> Iterator for QoiEncoder<I> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.header_bytes.next()
-            .or_else(||self.chunks.next())
-            .or_else(||self.footer_bytes.next())
+        self.header_bytes
+            .next()
+            .or_else(|| self.chunks.next())
+            .or_else(|| self.footer_bytes.next())
     }
 }
