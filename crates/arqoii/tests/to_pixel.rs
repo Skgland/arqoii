@@ -1,7 +1,4 @@
-
-use std::io::Cursor;
-
-use arqoii::{Pixel, QoiEncoder};
+use arqoii::Pixel;
 use arqoii_types::{QoiChannels, QoiColorSpace, QoiHeader};
 
 #[test]
@@ -57,7 +54,6 @@ fn transcode(name: &str, alt_header: Option<QoiHeader>) {
     let png_bytes = std::fs::read(format!("tests/test-images/{name}.png")).unwrap();
 
     let (info, reference_px) = load_png(&png_bytes);
-
 
     let expected_header = alt_header.unwrap_or_else(|| {
         QoiHeader::new(

@@ -78,7 +78,7 @@ pub enum QoiChunk {
         db_dg: i8, /* i4 -8..=7 */
     },
     #[non_exhaustive]
-    Run { run: u8, /* u6, 1..=62 */ },
+    Run { run: u8 /* u6, 1..=62 */ },
 }
 
 impl QoiChunk {
@@ -97,11 +97,7 @@ impl QoiChunk {
         debug_assert!((-2..=1).contains(&dg));
         debug_assert!((-2..=1).contains(&db));
 
-        Self::Diff {
-            dr,
-            dg,
-            db,
-        }
+        Self::Diff { dr, dg, db }
     }
 
     pub fn new_luma(dg: i8, dr_dg: i8, db_dg: i8) -> Self {
@@ -109,11 +105,7 @@ impl QoiChunk {
         debug_assert!((-8..=7).contains(&dr_dg));
         debug_assert!((-8..=7).contains(&db_dg));
 
-        Self::Luma {
-            dg,
-            dr_dg,
-            db_dg,
-        }
+        Self::Luma { dg, dr_dg, db_dg }
     }
 
     pub fn new_rgb(r: u8, g: u8, b: u8) -> Self {
@@ -139,9 +131,11 @@ impl QoiChunk {
             }
             QoiChunk::Diff { dr, dg, db } => {
                 // [ 0 1 dr dr dg dg db db]
-                buf.set([
-                    0b01000000 | (0b00111111 & ((0b11 & (dr + 2) as u8) << 4 | (0b11 & (dg + 2) as u8) << 2 | (0b11 & (db + 2) as u8)))
-                ])
+                buf.set([0b01000000
+                    | (0b00111111
+                        & ((0b11 & (dr + 2) as u8) << 4
+                            | (0b11 & (dg + 2) as u8) << 2
+                            | (0b11 & (db + 2) as u8)))])
             }
             QoiChunk::Luma { dg, dr_dg, db_dg } => {
                 // [ 1 0 dg dg dg dg dg dg] [ dr_dg dr_dg dr_dg dr_dg db_dg db_dg db_dg db_dg ]

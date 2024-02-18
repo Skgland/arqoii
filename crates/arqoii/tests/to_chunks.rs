@@ -1,5 +1,4 @@
-
-use arqoii::{Pixel};
+use arqoii::Pixel;
 use arqoii_types::{QoiChannels, QoiColorSpace, QoiHeader};
 
 #[test]
@@ -58,7 +57,6 @@ fn transcode(name: &str, _alt_header: Option<QoiHeader>) {
 
     let encoder = arqoii::QoiChunkEncoder::new(reference_px.into_iter());
     let decoder = arqoii::QoiChunkDecoder::new(reference_qoi[14..].iter().cloned());
-
 
     assert!(Iterator::eq(encoder, decoder));
 }

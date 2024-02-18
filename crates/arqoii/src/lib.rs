@@ -79,8 +79,22 @@ impl<I: Iterator<Item = Pixel>> Iterator for QoiChunkEncoder<I> {
     type Item = QoiChunk;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // we try to encode using these priorities:
+        // - fewest bytes
+        // - simplest: previous_pixel > index lookup > calculation
+        //
+        // this results in this ordering:
+        // 1. Run    1-byte  / 1..=62 pixel, copy previous_pixel
+        //
+        // 2. Index  1-byte  / pixel       , copy from index
+        // 3. Diff   1-byte  / pixel       , calculation based on previous_pixel
+        //
+        // 4. Luma   2-bytes / pixel       , calculation based on previous_pixel
+        // 5. Rgb    4-bytes / pixel       , alpha based on previous_pixel
+        // 6. Rgba   5-bytes / pixel
+
         let pixel = loop {
-            let Some(pixel) = self.peek.take().or_else(||self.pixel.next()) else {
+            let Some(pixel) = self.peek.take().or_else(|| self.pixel.next()) else {
                 // end of input pixels
                 // check if we have an in progress run
                 return if self.state.run > 0 {
@@ -97,7 +111,7 @@ impl<I: Iterator<Item = Pixel>> Iterator for QoiChunkEncoder<I> {
                 if self.state.run == 62 {
                     // reached max run write return it and rest run
                     self.state.run = 0;
-                    // we don't need to update the index or the previous  pixel as we are on a run
+                    // we don't need to update the index or the previous pixel as we are on a run
                     // and as such the pixel preceding the run has already set both correctly
                     return Some(QoiChunk::new_run(62));
                 }
@@ -129,6 +143,10 @@ impl<I: Iterator<Item = Pixel>> Iterator for QoiChunkEncoder<I> {
         let idx = pixel.pixel_hash();
 
         let chunk = if self.state.index[idx as usize] == pixel {
+            // we can't use a run so we won't violate the standard which states:
+            // > A valid encoder must not issue 2 or more consecutive QOI_OP_INDEX
+            // > chunks to the same index. QOI_OP_RUN should be used instead.
+
             // we have a matching index so use that
             QoiChunk::new_index(idx)
         } else if pixel.a == self.state.previous.a {
@@ -191,6 +209,7 @@ where
     /// # Note
     /// the encoder will not stop after width * height pixels on its own!
     /// ensure that the iterator results in the right amount of pixel or the resulting image will be malformed!
+    #[doc(alias = "save")]
     pub fn new(header: QoiHeader, pixels: I) -> Self {
         Self {
             chunks: QoiChunkEncoder::new(pixels),
@@ -208,7 +227,6 @@ where
     QoiChunkEncoder<I>: FusedIterator,
 {
 }
-
 
 impl<I: Iterator<Item = Pixel>> Iterator for QoiEncoder<I> {
     type Item = u8;
@@ -257,29 +275,31 @@ impl<const N: usize, I, Item> PeekN<N, I, Item> {
     where
         I: Iterator<Item = Item>,
     {
-
         // rotate the first remaining peek value to the front
-        let rotate = self.peek.iter().enumerate().find_map(|(idx, elem)| elem.is_some().then_some(idx)).unwrap_or(0);
+        let rotate = self
+            .peek
+            .iter()
+            .enumerate()
+            .find_map(|(idx, elem)| elem.is_some().then_some(idx))
+            .unwrap_or(0);
         self.peek.rotate_left(rotate);
 
-        let mut peek = [();N] .map(|_| MaybeUninit::uninit());
+        let mut peek = [(); N].map(|_| MaybeUninit::uninit());
         let mut count = 0;
 
-        for elem in self.peek
-            .iter_mut()
-            .flat_map(|elem| {
-                if elem.is_none() {
-                    *elem = self.iter.next();
-                }
-                elem.as_ref()
-            }) {
-                peek[count].write(elem);
-                count += 1;
+        for elem in self.peek.iter_mut().flat_map(|elem| {
+            if elem.is_none() {
+                *elem = self.iter.next();
+            }
+            elem.as_ref()
+        }) {
+            peek[count].write(elem);
+            count += 1;
         }
 
         if count == N {
             // Safety count is N and as such all indices 0 to N - 1 have been written to
-            Some(unsafe { core::mem::transmute_copy::<[MaybeUninit<&Item>;N], [&Item;N]>(&peek) })
+            Some(unsafe { core::mem::transmute_copy::<[MaybeUninit<&Item>; N], [&Item; N]>(&peek) })
         } else {
             None
         }
@@ -308,7 +328,10 @@ pub struct QoiChunkDecoder<I> {
     bytes: PeekN<7, I, u8>,
 }
 impl<I> QoiChunkDecoder<I> {
-    pub fn new(iter: I) -> QoiChunkDecoder<I> where I: Iterator<Item = u8> {
+    pub fn new(iter: I) -> QoiChunkDecoder<I>
+    where
+        I: Iterator<Item = u8>,
+    {
         Self {
             bytes: PeekN::new(iter),
         }
@@ -339,7 +362,7 @@ impl<I: Iterator<Item = u8>> Iterator for QoiChunkDecoder<I> {
                 // index
                 if init == 0 {
                     if let Some(peek) = self.bytes.peek() {
-                        if QOI_FOOTER[1..] == peek.map(|elem|*elem) {
+                        if QOI_FOOTER[1..] == peek.map(|elem| *elem) {
                             // we are done, init is the start of the footer
                             // note: this means that this is not a fused iterator
                             return None;
@@ -378,15 +401,16 @@ pub struct QoiDecoder<I> {
 }
 
 impl<I: Iterator<Item = u8>> QoiDecoder<I> {
+    #[doc(alias = "load")]
     pub fn new(mut iter: I) -> Option<(QoiHeader, Self)> {
-        let magic = [iter.next()?,iter.next()?,iter.next()?,iter.next()?];
+        let magic = [iter.next()?, iter.next()?, iter.next()?, iter.next()?];
 
         if magic != QOI_MAGIC {
             return None;
         }
 
-        let width = u32::from_be_bytes([iter.next()?,iter.next()?,iter.next()?,iter.next()?]);
-        let height = u32::from_be_bytes([iter.next()?,iter.next()?,iter.next()?,iter.next()?]);
+        let width = u32::from_be_bytes([iter.next()?, iter.next()?, iter.next()?, iter.next()?]);
+        let height = u32::from_be_bytes([iter.next()?, iter.next()?, iter.next()?, iter.next()?]);
         let channels = match iter.next()? {
             3 => types::QoiChannels::Rgb,
             4 => types::QoiChannels::Rgba,
@@ -398,10 +422,13 @@ impl<I: Iterator<Item = u8>> QoiDecoder<I> {
             _ => return None,
         };
 
-        Some((QoiHeader::new(width, height, channels, color_space), Self {
-            state: CoderState::default(),
-            chunks: QoiChunkDecoder::new(iter),
-        }))
+        Some((
+            QoiHeader::new(width, height, channels, color_space),
+            Self {
+                state: CoderState::default(),
+                chunks: QoiChunkDecoder::new(iter),
+            },
+        ))
     }
 }
 

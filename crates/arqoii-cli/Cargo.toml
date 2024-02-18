@@ -1,0 +1,15 @@
+[package]
+name = "arqoii-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+arqoii = { workspace = true }
+arqoii-types = { workspace = true }
+clap = { workspace = true }
+eframe = "0.26.2"
+png = { workspace = true }
