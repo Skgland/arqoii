@@ -15,15 +15,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install latest stable
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: stable
-        override: true
         components: rustfmt, clippy
     - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2.2.1
+      uses: Swatinem/rust-cache@v2.7.3
     - name: Check Rustfmt
       run: cargo fmt -- --check
     - name: Check Clippy
@@ -35,14 +34,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install latest stable
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@master
       with:
         toolchain: stable
-        override: true
     - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2.2.1
+      uses: Swatinem/rust-cache@v2.7.3
     - name: Build
       run: cargo build --verbose
     - name: Run tests
