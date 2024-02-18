@@ -3,14 +3,14 @@ members = ["crates/*"]
 resolver = "2"
 
 [workspace.package]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Skgland/arqoii"
 
 [workspace.dependencies]
-arqoii = { version = "0.2.0", path = "./crates/arqoii"}
-arqoii-types = { version = "0.2.0", path = "./crates/arqoii-types"}
+arqoii = { version = "0.3.0", path = "./crates/arqoii"}
+arqoii-types = { version = "0.3.0", path = "./crates/arqoii-types"}
 clap = { version = "4.5.1", features = ["derive"] }
 eframe = "0.26.2"
 png = "0.17.12"
