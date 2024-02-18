@@ -12,6 +12,7 @@ repository = "https://github.com/Skgland/arqoii"
 arqoii = { version = "0.2.0", path = "./crates/arqoii"}
 arqoii-types = { version = "0.2.0", path = "./crates/arqoii-types"}
 clap = { version = "4.5.1", features = ["derive"] }
+eframe = "0.26.2"
 png = "0.17.7"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
