@@ -1,9 +1,10 @@
 [package]
 name = "arqoii-cli"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-repository.workspace = true
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
 description = "A CLI for viewing qoi files and converting qoi to/from png"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

@@ -31,6 +31,10 @@ jobs:
   build:
     needs: [lint]
 
+    strategy:
+      matrix:
+        channel: ["stable", "beta", "nightly", "1.74.1"]
+
     runs-on: ubuntu-latest
 
     steps:
