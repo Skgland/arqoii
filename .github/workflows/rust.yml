@@ -42,7 +42,7 @@ jobs:
     - name: Install latest stable
       uses: dtolnay/rust-toolchain@master
       with:
-        toolchain: stable
+        toolchain:  ${{matrix.channel}}
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2.7.3
     - name: Build
