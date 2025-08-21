@@ -36,7 +36,13 @@ jobs:
       - uses: actions/checkout@v4
       - id: read-declared-msrv
         name: Read msrv from Cargo.toml rust_version field
-        run: echo "msrv=$(cargo metadata  --no-deps --format-version  1 | jq -r '.packages | map(select(.name == "arqoii") | ."rust_version") | .[0]')" >>  "$GITHUB_OUTPUT"
+        run: |
+          msrv=$(cargo metadata  --no-deps --format-version  1 | jq -r '.packages | map(select(.name == "arqoii") | ."rust_version") | .[0]')
+          echo "msrv=${msrv}"
+          echo "msrv=${msrv}" >>  "$GITHUB_OUTPUT"
+          echo "${GITHUB_OUTPUT}"
+
+
         
   build:
     needs: [lint, read-msrv]
@@ -49,7 +55,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Install latest stable
+    - name: Install desired toolchain
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain:  ${{matrix.channel}}
