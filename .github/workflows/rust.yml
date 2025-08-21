@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
       - id: read-declared-msrv
         name: Read msrv from Cargo.toml rust_version field
-        run: echo "msrv=$(cargo metadata  --no-deps --format-version  1 | jq -r '.packages[] | select(.name = "scryer-prolog") | ."rust_version"')" >>  "$GITHUB_OUTPUT"
+        run: echo "msrv=$(cargo metadata  --no-deps --format-version  1 | jq -r '.packages[] | select(.name = "arqoii") | ."rust_version"')" >>  "$GITHUB_OUTPUT"
         
   build:
     needs: [lint, read-msrv]
