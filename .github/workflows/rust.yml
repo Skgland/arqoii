@@ -36,11 +36,7 @@ jobs:
       - uses: actions/checkout@v4
       - id: read-declared-msrv
         name: Read msrv from Cargo.toml rust_version field
-        run: |
-          msrv=$(cargo metadata  --no-deps --format-version  1 | jq -r '.packages | map(select(.name == "arqoii") | ."rust_version") | .[0]')
-          echo "msrv=${msrv}"
-          echo "msrv=${msrv}" >>  "$GITHUB_OUTPUT"
-          echo "${GITHUB_OUTPUT}"
+        run: echo "msrv=$(cargo metadata  --no-deps --format-version  1 | jq -r '.packages | map(select(.name == "arqoii") | ."rust_version") | .[0]')" >>  "$GITHUB_OUTPUT"
 
 
         
