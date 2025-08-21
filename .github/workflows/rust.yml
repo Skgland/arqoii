@@ -28,12 +28,22 @@ jobs:
     - name: Check Clippy
       run: cargo clippy
 
+  read-msrv:
+    runs-on: ubuntu-22.04
+    outputs: 
+      msrv: ${{ steps.read-declared-msrv.outputs.msrv }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: read-declared-msrv
+        name: Read msrv from Cargo.toml rust_version field
+        run: echo "msrv=$(cargo metadata  --no-deps --format-version  1 | jq -r '.packages[] | select(.name = "scryer-prolog") | ."rust_version"')" >>  "$GITHUB_OUTPUT"
+        
   build:
-    needs: [lint]
+    needs: [lint, read-msrv]
 
     strategy:
       matrix:
-        channel: ["stable", "beta", "nightly", "1.74.1"]
+        channel: ["stable", "beta", "nightly", "${{ needs.read-msrv.outputs.msrv }}"]
 
     runs-on: ubuntu-latest
 
