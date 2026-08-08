@@ -37,15 +37,16 @@ jobs:
       - id: read-declared-msrv
         name: Read msrv from Cargo.toml rust_version field
         run: echo "msrv=$(cargo metadata  --no-deps --format-version  1 | jq -r '.packages | map(select(.name == "arqoii") | ."rust_version") | .[0]')" >>  "$GITHUB_OUTPUT"
-
-
         
   build:
+    name: "build (${{ matrix.name || matrix.channel }})"
     needs: [lint, read-msrv]
 
     strategy:
       matrix:
-        channel: ["stable", "beta", "nightly", "${{ needs.read-msrv.outputs.msrv }}"]
+        channel: ["stable", "beta", "nightly"]
+        include:
+          - { channel: "${{ needs.read-msrv.outputs.msrv }}", name: "msrv"}
 
     runs-on: ubuntu-latest
 
