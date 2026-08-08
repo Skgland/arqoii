@@ -1,6 +1,5 @@
 use std::{
-    io::{BufWriter, Write},
-    path::Path,
+    io::{BufWriter, Cursor, Write}, path::Path,
 };
 
 use arqoii::types::{Pixel, QoiChannels};
@@ -11,12 +10,12 @@ pub fn load(data: &[u8]) -> (QoiChannels, (u32, u32), Vec<Vec<Pixel>>) {
 
     // The decoder is a build for reader and can be used to set various decoding options
     // via `Transformations`. The default output transformation is `Transformations::IDENTITY`.
-    let mut decoder = png::Decoder::new(data);
+    let mut decoder = png::Decoder::new(Cursor::new(&data));
     decoder.set_transformations(Transformations::EXPAND | Transformations::STRIP_16);
 
     let mut reader = decoder.read_info().unwrap();
 
-    let buffer_size = reader.output_buffer_size();
+    let buffer_size = reader.output_buffer_size().expect("image too large");
 
     // Allocate the output buffer.
     let mut buf = vec![0; buffer_size];
@@ -116,7 +115,7 @@ pub(crate) fn save(
         QoiChannels::Rgb => png::ColorType::Rgb,
         QoiChannels::Rgba => png::ColorType::Rgba,
     });
-    encoder.set_adaptive_filter(png::AdaptiveFilterType::Adaptive);
+    encoder.set_filter(png::Filter::Adaptive);
     let mut writer = encoder.write_header().unwrap();
 
     let data = pixels

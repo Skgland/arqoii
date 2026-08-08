@@ -147,7 +147,7 @@ pub(crate) fn open(args: crate::CmdArgs) {
     eframe::run_native(
         "Arqoii Viewer",
         native_options,
-        Box::new(|cc| Box::new(ArqoiiViewer::new(cc, args.paths))),
+        Box::new(|cc| Ok(Box::new(ArqoiiViewer::new(cc, args.paths)))),
     )
     .unwrap();
 }
