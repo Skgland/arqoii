@@ -2,7 +2,7 @@ use arqoii_types::QOI_MAGIC;
 
 use crate::iterator_helper::PeekN;
 use crate::types::{
-    CoderState, Pixel, QoiChannels, QoiChunk, QoiColorSpace, QoiHeader, QOI_FOOTER,
+    CoderState, Pixel, QOI_FOOTER, QoiChannels, QoiChunk, QoiColorSpace, QoiHeader,
 };
 
 /// A decoder for decoding bytes into qoi chunks
