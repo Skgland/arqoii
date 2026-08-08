@@ -123,10 +123,10 @@ impl eframe::App for ArqoiiViewer {
                                     .maintain_aspect_ratio(true)
                                     .fit_to_original_size(1.0);
 
-                                if let Some(size) = image.size() {
-                                    if ui.available_width() < size.x + 12.0 {
-                                        ui.end_row();
-                                    }
+                                if let Some(size) = image.size()
+                                    && ui.available_width() < size.x + 12.0
+                                {
+                                    ui.end_row();
                                 }
                                 ui.group(|ui| {
                                     ui.vertical(|ui| {

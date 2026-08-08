@@ -45,14 +45,13 @@ impl<I: Iterator<Item = u8>> Iterator for QoiChunkDecoder<I> {
             let short = init >> 6;
             if short == 0b00 {
                 // index
-                if init == 0 {
-                    if let Some(peek) = self.bytes.peek() {
-                        if QOI_FOOTER[1..] == peek.map(|elem| *elem) {
-                            // we are done, init is the start of the footer
-                            // note: this means that this is not a fused iterator
-                            return None;
-                        }
-                    }
+                if init == 0
+                    && let Some(peek) = self.bytes.peek()
+                    && QOI_FOOTER[1..] == peek.map(|elem| *elem)
+                {
+                    // we are done, init is the start of the footer
+                    // note: this means that this is not a fused iterator
+                    return None;
                 }
 
                 Some(QoiChunk::new_index(init & 0b00111111))
