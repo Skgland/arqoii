@@ -4,7 +4,7 @@ use eframe::{
         self,
         load::{ImageLoader, LoadError},
     },
-    epaint::{ahash::HashMap, mutex::RwLock, ColorImage},
+    epaint::{ColorImage, ahash::HashMap, mutex::RwLock},
 };
 use std::{path::PathBuf, sync::Arc};
 

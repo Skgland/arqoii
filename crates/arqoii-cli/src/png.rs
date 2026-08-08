@@ -1,5 +1,6 @@
 use std::{
-    io::{BufWriter, Cursor, Write}, path::Path,
+    io::{BufWriter, Cursor, Write},
+    path::Path,
 };
 
 use arqoii::types::{Pixel, QoiChannels};
